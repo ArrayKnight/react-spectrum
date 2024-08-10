@@ -11,7 +11,7 @@
  */
 
 import {act, fireEvent, pointerMap, render} from '@react-spectrum/test-utils-internal';
-import {Button, OverlayArrow, Provider, Tooltip, TooltipContext, TooltipTrigger} from 'react-aria-components';
+import {Button, DEFAULT_SLOT, OverlayArrow, Provider, Tooltip, TooltipContext, TooltipTrigger} from 'react-aria-components';
 import React from 'react';
 import userEvent from '@testing-library/user-event';
 
@@ -143,6 +143,28 @@ describe('Tooltip', () => {
     expect(tooltip).toHaveAttribute('data-placement', props.placement);
   });
 
+  it('supports overriding props with slots from context', async () => {
+    let props = {placement: 'right'};
+    let {getAllByRole, getByRole} = render(
+      <Provider values={[[TooltipContext, {slots: {[DEFAULT_SLOT]: {}, named: props}}]]}>
+        <TestTooltip slot="named" />
+        <TestTooltip />
+      </Provider>
+    );
+    let buttons = getAllByRole('button');
+
+    await user.hover(buttons[0]);
+    act(() => jest.runAllTimers());
+
+    let tooltip = getByRole('tooltip');
+    expect(tooltip).toHaveAttribute('data-placement', props.placement);
+
+    await user.hover(buttons[1]);
+    act(() => jest.runAllTimers());
+
+    tooltip = getByRole('tooltip');
+    expect(tooltip).toHaveAttribute('data-placement', 'top');
+  });
 
   describe('portalContainer', () => {
     function InfoTooltip(props) {

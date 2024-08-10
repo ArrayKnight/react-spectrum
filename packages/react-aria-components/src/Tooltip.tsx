@@ -19,11 +19,11 @@ import {OverlayTriggerProps, TooltipTriggerProps, TooltipTriggerState, useToolti
 import React, {createContext, ForwardedRef, forwardRef, ReactNode, useContext, useRef, useState} from 'react';
 import {useLayoutEffect} from '@react-aria/utils';
 
-export interface TooltipTriggerComponentProps extends TooltipTriggerProps, SlotProps {
+export interface TooltipTriggerComponentProps extends TooltipTriggerProps {
   children: ReactNode
 }
 
-export interface TooltipProps extends PositionProps, Pick<AriaPositionProps, 'arrowBoundaryOffset'>, OverlayTriggerProps, AriaLabelingProps, RenderProps<TooltipRenderProps> {
+export interface TooltipProps extends PositionProps, Pick<AriaPositionProps, 'arrowBoundaryOffset'>, OverlayTriggerProps, AriaLabelingProps, RenderProps<TooltipRenderProps>, SlotProps {
   /**
    * The ref for the element which the tooltip positions itself with respect to.
    *
@@ -74,6 +74,7 @@ export interface TooltipRenderProps {
 
 export const TooltipTriggerStateContext = createContext<TooltipTriggerState | null>(null);
 export const TooltipContext = createContext<ContextValue<TooltipProps, HTMLDivElement>>(null);
+const InternalTooltipContext = createContext<ContextValue<TooltipProps, HTMLDivElement>>(null);
 
 /**
  * TooltipTrigger wraps around a trigger element and a Tooltip. It handles opening and closing
@@ -82,18 +83,16 @@ export const TooltipContext = createContext<ContextValue<TooltipProps, HTMLDivEl
  */
 export function TooltipTrigger(props: TooltipTriggerComponentProps) {
   let state = useTooltipTriggerState(props);
-  let triggerRef = useRef<FocusableElement>(null);
-  let {triggerProps, tooltipProps} = useTooltipTrigger(props, state, triggerRef);
-  let tooltipRef = useRef<HTMLDivElement>(null);
-  [tooltipProps, tooltipRef] = useContextProps({...tooltipProps, slot: props.slot}, tooltipRef, TooltipContext);
+  let ref = useRef<FocusableElement>(null);
+  let {triggerProps, tooltipProps} = useTooltipTrigger(props, state, ref);
 
   return (
     <Provider
       values={[
         [TooltipTriggerStateContext, state],
-        [TooltipContext, {...tooltipProps, ref: tooltipRef, triggerRef}]
+        [InternalTooltipContext, {...tooltipProps, triggerRef: ref}]
       ]}>
-      <FocusableProvider {...triggerProps} ref={triggerRef}>
+      <FocusableProvider {...triggerProps} ref={ref}>
         {props.children}
       </FocusableProvider>
     </Provider>
@@ -101,6 +100,7 @@ export function TooltipTrigger(props: TooltipTriggerComponentProps) {
 }
 
 function Tooltip({UNSTABLE_portalContainer, ...props}: TooltipProps, ref: ForwardedRef<HTMLDivElement>) {
+  [props, ref] = useContextProps(props, ref, InternalTooltipContext);
   [props, ref] = useContextProps(props, ref, TooltipContext);
   let contextState = useContext(TooltipTriggerStateContext);
   let localState = useTooltipTriggerState(props);
